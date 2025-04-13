@@ -8,7 +8,7 @@
     ],
     "routes": [
       {
-        "src": "api/gps",
+        "src": "/api/gps",
         "dest": "server.js"
       }
     ]
