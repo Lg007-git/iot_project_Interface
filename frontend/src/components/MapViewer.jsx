@@ -5,6 +5,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.gridlayer.googlemutant'
 import GoogleLayer from './GoogleLayer'
+import '../App.css'
 
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -38,6 +39,9 @@ export default function MapViewer() {
   const [batches, setBatches] = useState([])
   const [batchIndex, setBatchIndex] = useState(null)
   const [activeView, setActiveView] = useState('MAIN')
+  const [showSidebar, setShowSidebar] = useState(false)
+
+  const isMobile = window.innerWidth <= 768
 
   useEffect(() => {
     axios.get('https://iot-project-interfacebackend.vercel.app/api/gps')
@@ -119,13 +123,34 @@ const parkStatus = {
   const mapCenter = views[activeView].center
   const mapZoom = views[activeView].zoom
 
+  
   return (
+    <>
+    <button
+      onClick={() => setShowSidebar(prev => !prev)}
+      style={{
+        position: 'absolute',
+        top: '10px',
+        right: '10px',
+        zIndex: 1000,
+        background: '#fff',
+        border: '1px solid #ccc',
+        padding: '5px 10px',
+        borderRadius: '5px',
+        display: 'none'
+      }}
+      className="toggle-sidebar"
+    >
+      ☰ Menu
+    </button>
+
     <div style={{ display: 'flex', height: '100vh' }}>
       <div style={{ flex: 1 }}>
         <MapContainer
           center={ mapCenter}
           zoom={mapZoom}
           style={{ height: '100%', width: '100%' }}
+          zoomControl={!isMobile}
         >
            <RecenterMap center={mapCenter} zoom={mapZoom} />
           <GoogleLayer />
@@ -145,7 +170,7 @@ const parkStatus = {
         </MapContainer>
       </div>
 
-      <div style={{
+      <div className={`sidebar ${showSidebar ? 'show' : ''}`} style={{
               width: '10rem',
               background: 'linear-gradient(145deg, #d6d6d6, #f5f5f5)',
             boxShadow: 'inset 4px 4px 8px #bebebe, inset -4px -4px 8px #ffffff',
@@ -182,6 +207,7 @@ const parkStatus = {
         </div>
       </div>
     </div>
+    </>
   )
 }
 

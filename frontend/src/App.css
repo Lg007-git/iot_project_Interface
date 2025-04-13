@@ -14,3 +14,23 @@ html, body, #root {
     box-sizing: inherit;
   }
   
+  @media (max-width: 768px) {
+    .sidebar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      transform: translateX(-110%);
+      transition: transform 0.3s ease-in-out;
+      z-index: 999;
+    }
+  
+    .sidebar.show {
+      transform: translateX(0);
+    }
+  
+    .toggle-sidebar {
+      display: block !important;
+    }
+  }
+  
