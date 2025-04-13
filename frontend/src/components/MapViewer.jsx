@@ -40,7 +40,7 @@ export default function MapViewer() {
   const [activeView, setActiveView] = useState('MAIN')
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/gps')
+    axios.get('https://iot-project-interfacebackend.vercel.app/api/gps')
       .then(res => setData(res.data))
       .catch(err => console.error('Failed to fetch GPS data:', err))
   }, [])
@@ -113,7 +113,7 @@ const parkStatus = {
     })
   }
 
-  
+
 
   const lastVehicle = currentBatch[currentBatch.length - 1]
   const mapCenter = views[activeView].center
