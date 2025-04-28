@@ -6,8 +6,10 @@ import 'leaflet/dist/leaflet.css'
 import 'leaflet.gridlayer.googlemutant'
 import GoogleLayer from './GoogleLayer'
 import '../App.css'
+import Swal from 'sweetalert2'
 
-delete L.Icon.Default.prototype._getIconUrl
+
+delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
   iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
@@ -43,11 +45,19 @@ export default function MapViewer() {
 
   const isMobile = window.innerWidth <= 768
 
+  
   useEffect(() => {
-    axios.get('https://iot-project-interfacebackend.vercel.app/api/gps')
-      .then(res => setData(res.data))
-      .catch(err => console.error('Failed to fetch GPS data:', err))
-  }, [])
+    const fetchData = () => {
+      axios.get('https://iot-project-interfacebackend.vercel.app/api/gps')
+        .then(res => setData(res.data))
+        .catch(err => console.error('Failed to fetch GPS data:', err))
+    }
+  
+    fetchData() // Fetch immediately on mount
+    const interval = setInterval(fetchData, 4000) // Then every 4 seconds
+  
+    return () => clearInterval(interval) // Clear interval when component unmounts
+  }, [])  
 
   useEffect(() => {
     if (data.length === 0) return
@@ -81,6 +91,7 @@ export default function MapViewer() {
     setBatches(batchList)
   }, [data])
 
+
   const currentBatch = batchIndex !== null ? batches[batchIndex] : batches[batches.length - 1] || []
   const lastTimestamp = currentBatch.length > 0
   ? new Date(currentBatch[currentBatch.length - 1].timestamp).toLocaleString()
@@ -95,6 +106,29 @@ const parkStatus = {
   PARK2: park2Count > thresholds.PARK2 ? '❌ No Parking Area' : '✅ Parking Area Present',
   PARK3: park3Count > thresholds.PARK3 ? '❌ No Parking Area' : '✅ Parking Area Present'
 }
+
+const handleParkingClick = (zone) => {
+  setActiveView(zone)
+
+  let availableSlots = 0
+
+  if (zone === 'PARK1') {
+    availableSlots = Math.max(thresholds.PARK1 - park1Count, 0)
+  } else if (zone === 'PARK2') {
+    availableSlots = Math.max(thresholds.PARK2 - park2Count, 0)
+  } else if (zone === 'PARK3') {
+    availableSlots = Math.max(thresholds.PARK3 - park3Count, 0)
+  }
+
+  // Swal.fire({
+  //   title: `🅿️ ${zone} Parking Info`,
+  //   text: `Available Slots: ${availableSlots}`,
+  //   icon: availableSlots > 0 ? 'success' : 'error',
+  //   confirmButtonText: 'OK'
+  // })
+  alert(`🅿️ ${zone} Parking:\nAvailable Slots: ${availableSlots}`)
+}
+
 
 
   const handlePrev = () => {
@@ -117,15 +151,31 @@ const parkStatus = {
     })
   }
 
-
-
   const lastVehicle = currentBatch[currentBatch.length - 1]
   const mapCenter = views[activeView].center
   const mapZoom = views[activeView].zoom
 
+  const getCarIcon = (course) => {
+    // Define your logic for assigning different icons based on the course
+    if (course >= 0 && course < 90) {
+      return '/n1.png'; // For course in [0, 90)
+    } else if (course >= 90 && course < 180) {
+      return '/e1.png'; // For course in [90, 180)
+    } else if (course >= 180 && course < 270) {
+      return '/s1.png'; // For course in [180, 270)
+    } else {
+      return '/w1.png'; // For course in [270, 360)
+    }
+  };
+  
+  const openGoogleMaps = (lat, lng) => {
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    window.open(url, '_blank');
+  };
   
   return (
     <>
+    
     <button
       onClick={() => setShowSidebar(prev => !prev)}
       style={{
@@ -152,12 +202,17 @@ const parkStatus = {
           style={{ height: '100%', width: '100%' }}
           zoomControl={!isMobile}
         >
-           <RecenterMap center={mapCenter} zoom={mapZoom} />
+          <RecenterMap center={mapCenter} zoom={mapZoom} />
           <GoogleLayer />
           {currentBatch.map(vehicle => (
             <Marker
               key={`${vehicle.vehicleId}-${vehicle.timestamp}`}
               position={[vehicle.latitude, vehicle.longitude]}
+              icon={new L.Icon({
+                iconUrl: getCarIcon(vehicle.course),
+                iconSize: [40, 40],
+                iconAnchor: [20, 20],
+              })}
             >
               <Popup>
                 <b>Vehicle ID:</b> {vehicle.vehicleId} <br />
@@ -169,6 +224,7 @@ const parkStatus = {
           ))}
         </MapContainer>
       </div>
+      
 
       <div className={`sidebar ${showSidebar ? 'show' : ''}`} style={{
               width: '10rem',
@@ -181,9 +237,9 @@ const parkStatus = {
               color: '#fff',
               borderRight: '1px solid rgba(255,255,255,0.1)'}}>
         <div >
-          <h4 style={{ color: 'black' }}>Map Controls</h4>
-          <button onClick={handlePrev} disabled={batches.length <= 1} style={{ width: '100%', marginBottom: '0.5rem' }}>⬅️ Prev</button>
-          <button onClick={handleNext} disabled={batches.length <= 1} style={{ width: '100%', marginBottom: '1rem' }}>Next ➡️</button>
+          <h4 style={{ color: 'black',marginTop:'-0.2rem' }}>Map Controls</h4>
+          <button onClick={handlePrev} disabled={batches.length <= 1} style={{ width: '100%', marginBottom: '0.3rem' }}>⬅️ Prev</button>
+          <button onClick={handleNext} disabled={batches.length <= 1} style={{ width: '100%', marginBottom: '0.3rem' }}>Next ➡️</button>
 
           <p style={{ color: 'black' }}><b>Batch Time:</b><br />{lastTimestamp}</p>
 
@@ -191,10 +247,13 @@ const parkStatus = {
 
           <h5 style={{ color: 'black' }}>Switch View</h5>
           <button onClick={() => setActiveView('MAIN')} style={{ width: '100%', marginBottom: '0.5rem',color: 'black' }}>🏫 LNMIIT Campus</button>
-          <button onClick={() => setActiveView('PARK1')} style={{ width: '100%', marginBottom: '0.5rem',color: 'black' }}>🅿️ Parking 1 </button>
-          <button onClick={() => setActiveView('PARK2')} style={{ width: '100%', marginBottom: '0.5rem',color: 'black' }}>🅿️ Parking 2</button>
-          <button onClick={() => setActiveView('PARK3')} style={{ width: '100%' ,color: 'black'}}>🅿️ Parking 3</button>
-          
+          <button onClick={() => handleParkingClick('PARK1')} style={{ width: '100%', marginBottom: '0.1rem',color: 'black' }}>🅿️ Parking 1 </button>
+          <button onClick={() => openGoogleMaps(26.936884, 75.924377)} style={{ width: '100%', marginBottom: '0.5rem',color: 'black' }}>↪️Navigate to Park 1</button>
+          <button onClick={() => handleParkingClick('PARK2')} style={{ width: '100%', marginBottom: '0.1rem',color: 'black' }}>🅿️ Parking 2</button>
+          <button onClick={() => openGoogleMaps(26.935225, 75.924663)} style={{ width: '100%', marginBottom: '0.5rem',color: 'black' }}>↪️Navigate to Park 2</button>
+          <button onClick={() => handleParkingClick('PARK3')} style={{ width: '100%' ,marginBottom: '0.1rem',color: 'black'}}>🅿️ Parking 3</button>
+          <button onClick={() => openGoogleMaps(26.935124, 75.924726)} style={{ width: '100%', marginBottom: '0.5rem',color: 'black' }}>↪️Navigate to Park 3</button>
+
           <hr />
           <h5 style={{ color: 'black' }}>Parking Status</h5>
           <p style={{ fontSize: '0.8rem',color: 'black' }}>🅿️ 1: {parkStatus.PARK1}</p>
