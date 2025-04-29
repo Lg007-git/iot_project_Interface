@@ -4,9 +4,10 @@ import axios from 'axios'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.gridlayer.googlemutant'
-import GoogleLayer from './GoogleLayer'
+import GoogleLayer from './GoogleLayer.jsx'
 import '../App.css'
 import Swal from 'sweetalert2'
+import ChartView from './ChartView.jsx'
 
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -26,7 +27,7 @@ const views = {
 const thresholds = {
   PARK1: 3,
   PARK2: 2,
-  PARK3: 2
+  PARK3: 4
 }
 
 const bounds = {
@@ -42,6 +43,7 @@ export default function MapViewer() {
   const [batchIndex, setBatchIndex] = useState(null)
   const [activeView, setActiveView] = useState('MAIN')
   const [showSidebar, setShowSidebar] = useState(false)
+  const [showChart, setShowChart] = useState(false)
 
   const isMobile = window.innerWidth <= 768
 
@@ -102,9 +104,9 @@ const park2Count = countVehiclesInBounds(currentBatch, bounds.PARK2)
 const park3Count = countVehiclesInBounds(currentBatch, bounds.PARK3)
 
 const parkStatus = {
-  PARK1: park1Count > thresholds.PARK1 ? '❌ No Parking Area' : '✅ Parking Area Present',
-  PARK2: park2Count > thresholds.PARK2 ? '❌ No Parking Area' : '✅ Parking Area Present',
-  PARK3: park3Count > thresholds.PARK3 ? '❌ No Parking Area' : '✅ Parking Area Present'
+  PARK1: park1Count >= thresholds.PARK1 ? '❌ No Parking Area' : '✅ Parking Area Present',
+  PARK2: park2Count >= thresholds.PARK2 ? '❌ No Parking Area' : '✅ Parking Area Present',
+  PARK3: park3Count >= thresholds.PARK3 ? '❌ No Parking Area' : '✅ Parking Area Present'
 }
 
 const handleParkingClick = (zone) => {
@@ -120,13 +122,13 @@ const handleParkingClick = (zone) => {
     availableSlots = Math.max(thresholds.PARK3 - park3Count, 0)
   }
 
-  // Swal.fire({
-  //   title: `🅿️ ${zone} Parking Info`,
-  //   text: `Available Slots: ${availableSlots}`,
-  //   icon: availableSlots > 0 ? 'success' : 'error',
-  //   confirmButtonText: 'OK'
-  // })
-  alert(`🅿️ ${zone} Parking:\nAvailable Slots: ${availableSlots}`)
+  Swal.fire({
+    title: `🅿️ ${zone} Parking Info`,
+    text: `Available Slots: ${availableSlots}`,
+    icon: availableSlots > 0 ? 'success' : 'error',
+    confirmButtonText: 'OK'
+  })
+  //alert(`🅿️ ${zone} Parking:\nAvailable Slots: ${availableSlots}`)
 }
 
 
@@ -155,18 +157,18 @@ const handleParkingClick = (zone) => {
   const mapCenter = views[activeView].center
   const mapZoom = views[activeView].zoom
 
-  const getCarIcon = (course) => {
-    // Define your logic for assigning different icons based on the course
-    if (course >= 0 && course < 90) {
-      return '/n1.png'; // For course in [0, 90)
-    } else if (course >= 90 && course < 180) {
-      return '/e1.png'; // For course in [90, 180)
-    } else if (course >= 180 && course < 270) {
-      return '/s1.png'; // For course in [180, 270)
-    } else {
-      return '/w1.png'; // For course in [270, 360)
-    }
-  };
+  // const getCarIcon = (course) => {
+  //   // Define your logic for assigning different icons based on the course
+  //   if (course >= 0 && course < 90) {
+  //     return '/n1.png'; // For course in [0, 90)
+  //   } else if (course >= 90 && course < 180) {
+  //     return '/e1.png'; // For course in [90, 180)
+  //   } else if (course >= 180 && course < 270) {
+  //     return '/s1.png'; // For course in [180, 270)
+  //   } else {
+  //     return '/w1.png'; // For course in [270, 360)
+  //   }
+  // };
   
   const openGoogleMaps = (lat, lng) => {
     const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
@@ -195,7 +197,7 @@ const handleParkingClick = (zone) => {
     </button>
 
     <div style={{ display: 'flex', height: '100vh' }}>
-      <div style={{ flex: 1 }}>
+      <div style={{ flex: 1,position:'relative' }}>
         <MapContainer
           center={ mapCenter}
           zoom={mapZoom}
@@ -208,11 +210,11 @@ const handleParkingClick = (zone) => {
             <Marker
               key={`${vehicle.vehicleId}-${vehicle.timestamp}`}
               position={[vehicle.latitude, vehicle.longitude]}
-              icon={new L.Icon({
-                iconUrl: getCarIcon(vehicle.course),
-                iconSize: [40, 40],
-                iconAnchor: [20, 20],
-              })}
+              // icon={new L.Icon({
+              //   iconUrl: getCarIcon(vehicle.course),
+              //   iconSize: [40, 40],
+              //   iconAnchor: [20, 20],
+              // })}
             >
               <Popup>
                 <b>Vehicle ID:</b> {vehicle.vehicleId} <br />
@@ -222,7 +224,27 @@ const handleParkingClick = (zone) => {
               </Popup>
             </Marker>
           ))}
-        </MapContainer>
+        
+        <button onClick={() => setShowChart(prev => !prev)} style={{ position:'absolute',margin: '10px', padding: '8px 16px',marginLeft:'2.7rem', marginTop:'0.7rem',zIndex:'1001' }}>
+        {showChart ? 'Hide Chart' : 'Show Chart'}
+      </button>
+
+      {showChart && (
+    <div style={{
+      position: 'fixed',        // fixed to screen
+      top: 0,
+      left: 0,
+      width: '100vw',           // full width
+      height: '100vh',          // full height
+      backgroundColor: '#ffffff',  // solid white background
+      zIndex: 1000,
+      overflow: 'auto',         // scroll if chart overflows
+      padding: '20px'           // optional padding
+    }}>
+      <ChartView />
+    </div>
+      )}
+      </MapContainer>
       </div>
       
 
