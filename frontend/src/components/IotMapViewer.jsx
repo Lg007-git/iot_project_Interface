@@ -73,16 +73,18 @@ export default function IotMapViewer() {
           >
             <Popup>
               <b>ID:</b> {vehicle.vehicleID}<br/>
+              <b>Latitude:</b> {vehicle.latitude}<br/>
+              <b>Longitude:</b> {vehicle.longitude}<br/>
               <b>Speed:</b> {vehicle.speed} km/h<br/>
               <b>Accel Course:</b> {vehicle.accelCourse}<br/>
-              <b>Time:</b> {vehicle.time}<br/>
+              {/* <b>Time:</b> {vehicle.time}<br/> */}
               <b>Created:</b> {new Date(vehicle.createdAt).toLocaleString()}
             </Popup>
           </Marker>
         ))}
       </MapContainer>
 
-      <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 2001 }}>
+      <div style={{ position: 'absolute', top: 50, right: 10, zIndex: 2001 }}>
         <button 
           onClick={() => setBatchIndex(prev => Math.max(prev - 1, 0))} 
           disabled={batchIndex === 0}
