@@ -8,6 +8,7 @@ import GoogleLayer from './GoogleLayer.jsx'
 import '../App.css'
 import Swal from 'sweetalert2'
 import ChartView from './ChartView.jsx'
+import IotMapViewer from './IotMapViewer.jsx';
 
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -44,6 +45,7 @@ export default function MapViewer() {
   const [activeView, setActiveView] = useState('MAIN')
   const [showSidebar, setShowSidebar] = useState(false)
   const [showChart, setShowChart] = useState(false)
+  const [showIotMap, setShowIotMap] = useState(false);
 
   const isMobile = window.innerWidth <= 768
 
@@ -95,9 +97,7 @@ export default function MapViewer() {
 
 
   const currentBatch = batchIndex !== null ? batches[batchIndex] : batches[batches.length - 1] || []
-  const lastTimestamp = currentBatch.length > 0
-  ? new Date(currentBatch[currentBatch.length - 1].timestamp).toLocaleString()
-  : 'No data yet'
+  const lastTimestamp = currentBatch.length > 0 ? new Date(currentBatch[currentBatch.length - 1].timestamp).toLocaleString() : 'No data yet'
 
 const park1Count = countVehiclesInBounds(currentBatch, bounds.PARK1)
 const park2Count = countVehiclesInBounds(currentBatch, bounds.PARK2)
@@ -210,11 +210,6 @@ const handleParkingClick = (zone) => {
             <Marker
               key={`${vehicle.vehicleId}-${vehicle.timestamp}`}
               position={[vehicle.latitude, vehicle.longitude]}
-              // icon={new L.Icon({
-              //   iconUrl: getCarIcon(vehicle.course),
-              //   iconSize: [40, 40],
-              //   iconAnchor: [20, 20],
-              // })}
             >
               <Popup>
                 <b>Vehicle ID:</b> {vehicle.vehicleId} <br />
@@ -225,28 +220,49 @@ const handleParkingClick = (zone) => {
             </Marker>
           ))}
         
+        <button onClick={() => setShowIotMap(prev => !prev)} 
+            style={{ position: 'absolute', margin: '0.7rem', padding: '8px 16px', marginLeft: '10rem', marginTop:'0.7rem', zIndex:'2001' }}
+        >
+          {showIotMap ? 'Close IOT View' : 'IOT Data'}
+          </button>
+
         <button onClick={() => setShowChart(prev => !prev)} style={{ position:'absolute',margin: '10px', padding: '8px 16px',marginLeft:'2.7rem', marginTop:'0.7rem',zIndex:'1001' }}>
-        {showChart ? 'Hide Chart' : 'Show Chart'}
-      </button>
+          {showChart ? 'Hide Chart' : 'Show Chart'}
+        </button>
 
       {showChart && (
-    <div style={{
-      position: 'fixed',        // fixed to screen
-      top: 0,
-      left: 0,
-      width: '100vw',           // full width
-      height: '100vh',          // full height
-      backgroundColor: '#ffffff',  // solid white background
-      zIndex: 1000,
-      overflow: 'auto',         // scroll if chart overflows
-      padding: '20px'           // optional padding
-    }}>
-      <ChartView />
-    </div>
-      )}
-      </MapContainer>
+              <div style={{
+                               position: 'fixed',        // fixed to screen
+                              top: 0,
+                              left: 0,
+                               width: '100vw',           // full width
+                              height: '100vh',          // full height
+                               backgroundColor: '#ffffff',  // solid white background
+                              zIndex: 1000,
+                              overflow: 'auto',         // scroll if chart overflows
+                              padding: '20px'           // optional padding
+                          }}>
+                <ChartView />
+              </div>
+              )}
+        </MapContainer>
       </div>
       
+      {showIotMap && (
+            <div style={{
+                        position: 'fixed',
+                          top: 0,
+                        left: 0,
+                        width: '100vw',
+                        height: '100vh',
+                        backgroundColor: '#fff',
+                        zIndex: 2000,
+                        overflow: 'hidden'
+                      }}>
+              <IotMapViewer />  
+        </div>
+      )}
+
 
       <div className={`sidebar ${showSidebar ? 'show' : ''}`} style={{
               width: '10rem',

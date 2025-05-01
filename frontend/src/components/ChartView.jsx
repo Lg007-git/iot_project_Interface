@@ -6,8 +6,17 @@ const ChartView = () => {
   const [data, setData] = useState([])
   const [chartData, setChartData] = useState([])
   const [selectedPeriod, setSelectedPeriod] = useState('lastDay')
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
 
   const timeSlots = Array.from({ length: 24 }, (_, i) => `${i}-${(i + 1) % 24}`)
+
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     fetchData()
