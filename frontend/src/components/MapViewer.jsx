@@ -7,8 +7,9 @@ import 'leaflet.gridlayer.googlemutant'
 import GoogleLayer from './GoogleLayer.jsx'
 import '../App.css'
 import Swal from 'sweetalert2'
-import ChartView from './ChartView.jsx'
-import IotMapViewer from './IotMapViewer.jsx'
+import { useNavigate } from 'react-router-dom'
+
+
 
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -36,16 +37,15 @@ const bounds = {
   PARK3: { minLat: 26.934931, maxLat: 26.935403, minLng: 75.924419, maxLng: 75.925084 }
 }
 
+
 export default function MapViewer() {
   const [data, setData] = useState([])
   const [batches, setBatches] = useState([])
   const [batchIndex, setBatchIndex] = useState(null)
   const [activeView, setActiveView] = useState('MAIN')
   const [showSidebar, setShowSidebar] = useState(false)
-  const [showChart, setShowChart] = useState(false)
-  const [showIotMap, setShowIotMap] = useState(false)
   const [showLive, setShowLive] = useState(false)
-
+  const navigate = useNavigate()
   const isMobile = window.innerWidth <= 768
 
   useEffect(() => {
@@ -54,7 +54,6 @@ export default function MapViewer() {
         .then(res => setData(res.data))
         .catch(err => console.error('Failed to fetch GPS data:', err))
     }
-
     fetchData()
     const interval = setInterval(fetchData, 4000)
     return () => clearInterval(interval)
@@ -65,16 +64,13 @@ export default function MapViewer() {
     const sorted = [...data].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
     const batchList = []
     let index = 0
-
     while (index < sorted.length) {
       const batchStartTime = new Date(sorted[index].timestamp)
       const vehicleMap = new Map()
-
       while (index < sorted.length) {
         const current = sorted[index]
         const currentTime = new Date(current.timestamp)
         const diffInSeconds = (currentTime - batchStartTime) / 1000
-
         if (diffInSeconds <= 4) {
           vehicleMap.set(current.vehicleId, current)
           index++
@@ -82,28 +78,22 @@ export default function MapViewer() {
           break
         }
       }
-
       const uniqueBatch = Array.from(vehicleMap.values())
       if (uniqueBatch.length > 0) {
         batchList.push(uniqueBatch)
       }
     }
-
     setBatches(batchList)
   }, [data])
 
   const latestBatch = batches[batches.length - 1] || []
-
   const currentBatch = showLive
     ? latestBatch.filter(v => (Date.now() - new Date(v.timestamp)) / 1000 <= 10)
     : batchIndex !== null
       ? batches[batchIndex]
       : latestBatch
 
-  const lastTimestamp = currentBatch.length > 0
-    ? new Date(currentBatch[currentBatch.length - 1].timestamp).toLocaleString()
-    : 'No data yet'
-
+  const lastTimestamp = currentBatch.length > 0 ? new Date(currentBatch[currentBatch.length - 1].timestamp).toLocaleString() : 'No data yet'
   const park1Count = countVehiclesInBounds(currentBatch, bounds.PARK1)
   const park2Count = countVehiclesInBounds(currentBatch, bounds.PARK2)
   const park3Count = countVehiclesInBounds(currentBatch, bounds.PARK3)
@@ -117,7 +107,6 @@ export default function MapViewer() {
   const handleParkingClick = (zone) => {
     setActiveView(zone)
     let availableSlots = 0
-
     if (zone === 'PARK1') {
       availableSlots = Math.max(thresholds.PARK1 - park1Count, 0)
     } else if (zone === 'PARK2') {
@@ -125,7 +114,6 @@ export default function MapViewer() {
     } else if (zone === 'PARK3') {
       availableSlots = Math.max(thresholds.PARK3 - park3Count, 0)
     }
-
     Swal.fire({
       title: `🅿️ ${zone} Parking Info`,
       text: `Available Slots: ${availableSlots}`,
@@ -133,6 +121,24 @@ export default function MapViewer() {
       confirmButtonText: 'OK'
     })
   }
+
+  function countVehiclesInBounds(vehicles, bound) {
+  return vehicles.filter(v =>
+    v.latitude >= bound.minLat &&
+    v.latitude <= bound.maxLat &&
+    v.longitude >= bound.minLng &&
+    v.longitude <= bound.maxLng
+  ).length
+}
+
+  function RecenterMap({ center, zoom }) {
+    const map = useMap()
+    useEffect(() => {
+      map.setView(center, zoom)
+    }, [center, zoom])
+    return null
+  }
+
 
   const handlePrev = () => {
     setBatchIndex(prev => {
@@ -166,17 +172,6 @@ export default function MapViewer() {
     <>
       <button
         onClick={() => setShowSidebar(prev => !prev)}
-        style={{
-          position: 'absolute',
-          top: '10px',
-          right: '10px',
-          zIndex: 1000,
-          background: '#fff',
-          border: '1px solid #ccc',
-          padding: '5px 10px',
-          borderRadius: '5px',
-          display: 'none'
-        }}
         className="toggle-sidebar"
       >
         ☰ Menu
@@ -207,59 +202,18 @@ export default function MapViewer() {
               </Marker>
             ))}
 
-            <button onClick={() => setShowIotMap(prev => !prev)}
-              style={{ position: 'absolute', margin: '0.7rem', padding: '8px 16px', marginLeft: '10rem', marginTop: '0.7rem', zIndex: '2001' }}>
-              {showIotMap ? 'Close IOT View' : 'IOT Data'}
+            <button className="showIotmap" onClick={() => {navigate('/iot-map');}}>
+              {'IOT Data'}
             </button>
 
-            <button onClick={() => setShowChart(prev => !prev)} style={{ position: 'absolute', margin: '10px', padding: '8px 16px', marginLeft: '2.7rem', marginTop: '0.7rem', zIndex: '1001' }}>
-              {showChart ? 'Hide Chart' : 'Show Chart'}
+            <button className="showchart" onClick={() => {navigate('/chart');}}>
+              {'Show Chart'}
             </button>
-
-            {showChart && (
-              <div style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                width: '100vw',
-                height: '100vh',
-                backgroundColor: '#ffffff',
-                zIndex: 1000,
-                overflow: 'auto',
-                padding: '20px'
-              }}>
-                <ChartView />
-              </div>
-            )}
           </MapContainer>
         </div>
 
-        {showIotMap && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            backgroundColor: '#fff',
-            zIndex: 2000,
-            overflow: 'hidden'
-          }}>
-            <IotMapViewer />
-          </div>
-        )}
-
-        <div className={`sidebar ${showSidebar ? 'show' : ''}`} style={{
-          width: '10rem',
-          background: 'linear-gradient(145deg, #d6d6d6, #f5f5f5)',
-          boxShadow: 'inset 4px 4px 8px #bebebe, inset -4px -4px 8px #ffffff',
-          padding: '0.5rem',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          color: '#fff',
-          borderRight: '1px solid rgba(255,255,255,0.1)'
-        }}>
+          {/* `sidebar ${showSidebar ? 'show' : ''}` */}
+        <div className={`sidebar ${showSidebar ? 'show' : ''}`}> 
           <div>
             <h4 style={{ color: 'black', marginTop: '-0.2rem' }}>Map Controls</h4>
             <button onClick={handlePrev} disabled={batches.length <= 1} style={{ width: '100%', marginBottom: '0.3rem' }}>⬅️ Prev</button>
@@ -282,12 +236,28 @@ export default function MapViewer() {
 
             <hr />
             <h5 style={{ color: 'black' }}>Parking Status</h5>
-            <p style={{ fontSize: '0.8rem', color: 'black' }}>🅿️ 1: {parkStatus.PARK1}</p>
-            <p style={{ fontSize: '0.8rem', color: 'black' }}>🅿️ 2: {parkStatus.PARK2}</p>
-            <p style={{ fontSize: '0.8rem', color: 'black' }}>🅿️ 3: {parkStatus.PARK3}</p>
+            <p style={{ fontSize: '0.7rem', color: 'black' }}>🅿️ 1: {parkStatus.PARK1}</p>
+            <p style={{ fontSize: '0.7rem', color: 'black' }}>🅿️ 2: {parkStatus.PARK2}</p>
+            <p style={{ fontSize: '0.7rem', color: 'black' }}>🅿️ 3: {parkStatus.PARK3}</p>
+
+            <div style={{
+              marginTop:'2rem',
+              border: '2px solid skyblue',
+              borderRadius:'10%', 
+              borderColor:'black',
+              color:'black',
+              paddingLeft:'0.5rem'
+            }}>
+            <a  style={{
+                      textDecoration: 'none',
+                      color: 'black',
+                      fontWeight: 'bold',
+                      fontSize: '1rem'
+                    }} href="https://iot-gps-data-gq1r.vercel.app/">📍Send Location</a> 
+            </div>
           </div>
 
-          <div style={{ textAlign: 'center', fontSize: '0.8rem', color: '#888',marginTop: '-0.5rem' }}>
+          <div className="copy-right">
             GPS Tracker © 2025
           </div>
         </div>
@@ -296,19 +266,3 @@ export default function MapViewer() {
   )
 }
 
-function countVehiclesInBounds(vehicles, bound) {
-  return vehicles.filter(v =>
-    v.latitude >= bound.minLat &&
-    v.latitude <= bound.maxLat &&
-    v.longitude >= bound.minLng &&
-    v.longitude <= bound.maxLng
-  ).length
-}
-
-function RecenterMap({ center, zoom }) {
-  const map = useMap()
-  useEffect(() => {
-    map.setView(center, zoom)
-  }, [center, zoom])
-  return null
-}

@@ -6,6 +6,7 @@ import 'leaflet/dist/leaflet.css'
 import 'leaflet.gridlayer.googlemutant'
 import GoogleLayer from './GoogleLayer.jsx'
 import '../App.css'
+import { useNavigate } from 'react-router-dom'
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -17,6 +18,7 @@ L.Icon.Default.mergeOptions({
 export default function IotMapViewer() {
   const [batches, setBatches] = useState([]);
   const [batchIndex, setBatchIndex] = useState(0);
+  const navigate = useNavigate()
 
   useEffect(() => {
     axios.get('https://smart-traffic-its.vercel.app/api/fetchdata')
@@ -82,6 +84,14 @@ export default function IotMapViewer() {
             </Popup>
           </Marker>
         ))}
+        <button className="showIotmap" onClick={() => {navigate('/map');}}>
+              {'Main map'}
+        </button>
+
+        <button className="showchart" onClick={() => {navigate('/chart');}}>
+            {'Show Chart'}
+        </button>
+
       </MapContainer>
 
       <div style={{ position: 'absolute', top: 50, right: 10, zIndex: 2001 }}>
